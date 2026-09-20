@@ -1,0 +1,10 @@
+*.db
+*.db-shm
+*.db-wal
+*.log
+.env
+*.exe
+node_modules/
+dist/
+.vscode/
+.idea/
