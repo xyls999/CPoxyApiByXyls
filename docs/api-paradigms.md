@@ -27,14 +27,14 @@ client = OpenAI(base_url="http://127.0.0.1:3000/v1", api_key="sk-…")
 
 # 非流式
 resp = client.chat.completions.create(
-    model="gemini-3.6-flash",
+    model="gpt-5.6",
     messages=[{"role": "user", "content": "Review this code:\n..."}],
 )
 print(resp.choices[0].message.content)
 
 # 流式
 stream = client.chat.completions.create(
-    model="gemini-3.6-flash",
+    model="gpt-5.6",
     messages=[{"role": "user", "content": "写一个快速排序"}],
     stream=True,
 )
@@ -50,13 +50,11 @@ Codex 只支持 Responses 协议（`wire_api = "responses"`，旧版 `wire_api =
 网关的 `POST /v1/responses` 已实现协议转换，直接可用。
 
 1. 复制模板：`config/codex/cpoxy.config.toml` → `%USERPROFILE%\.codex\cpoxy.config.toml`，
-   并把 `base_url` 里的 `<GATEWAY-HOST>` 换成网关地址（本机用 `127.0.0.1`，局域网用 `10.113.5.51`）。
-2. 设置 API Key 环境变量（provider 通过 `env_key` 读取）：
+   并替换 `<GATEWAY-HOST>`（本机 `127.0.0.1`，局域网 `10.113.5.51`）和 `<GATEWAY-TOKEN>`（网关令牌）。
+2. 无需环境变量：密钥直接内联在 `experimental_bearer_token` 字段。
 
-   ```powershell
-   setx CPOXY_API_KEY "sk-你的网关令牌"
-   ```
-
+   也支持环境变量方式：provider 写 `env_key = "CPOXY_API_KEY"` 后
+   `setx CPOXY_API_KEY "sk-…"`。
 3. 以 profile 启动：
 
    ```powershell

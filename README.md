@@ -110,10 +110,10 @@ $env:CODING_API_KEY = "sk-你的网关令牌"
 原始 `gemini-*` 名称同样可用。新注册账号默认赠送 $1,000,000 额度。
 
 **Codex CLI 专用**：把 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 复制为
-`%USERPROFILE%\.codex\cpoxy.config.toml`，再设置 `CPOXY_API_KEY` 环境变量后 `codex --profile cpoxy` 启动：
+`%USERPROFILE%\.codex\cpoxy.config.toml`，替换其中的 `<GATEWAY-HOST>` 和 `<GATEWAY-TOKEN>`
+（密钥直接内联在 `experimental_bearer_token`，无需环境变量），然后 `codex --profile cpoxy` 启动：
 
 ```powershell
-setx CPOXY_API_KEY "sk-你的网关令牌"
 codex --profile cpoxy
 ```
 
