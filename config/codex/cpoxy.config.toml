@@ -1,0 +1,9 @@
+model = "gpt-5.6"
+model_provider = "cpoxy"
+model_reasoning_effort = "high"
+
+[model_providers.cpoxy]
+name = "CPoxy"
+base_url = "http://<GATEWAY-HOST>:3000/v1"
+wire_api = "responses"
+env_key = "CPOXY_API_KEY"

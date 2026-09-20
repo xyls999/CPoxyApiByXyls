@@ -104,7 +104,18 @@ $env:CODING_API_KEY = "sk-你的网关令牌"
 |---|---|
 | Base URL | `http://127.0.0.1:3000/v1` |
 | API Key | new-api 管理台发放的 `sk-…` 令牌 |
-| Model | `gemini-3.6-flash`（首选）/ `gemini-3.5-flash-lite`（低延迟） |
+| Model | `gpt-5.6`（首选）/ `gpt-6` / `gpt-5.6-mini`（低延迟） |
+
+模型名在网关做映射（`gpt-*` → 上游 Gemini 模型），对客户端只暴露 GPT 命名；
+原始 `gemini-*` 名称同样可用。新注册账号默认赠送 $1,000,000 额度。
+
+**Codex CLI 专用**：把 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 复制为
+`%USERPROFILE%\.codex\cpoxy.config.toml`，再设置 `CPOXY_API_KEY` 环境变量后 `codex --profile cpoxy` 启动：
+
+```powershell
+setx CPOXY_API_KEY "sk-你的网关令牌"
+codex --profile cpoxy
+```
 
 ---
 
@@ -120,7 +131,7 @@ client = OpenAI(
     api_key="sk-你的网关令牌",
 )
 resp = client.chat.completions.create(
-    model="gemini-3.6-flash",
+    model="gpt-5.6",
     messages=[{"role": "user", "content": "解释这段代码"}],
 )
 print(resp.choices[0].message.content)
@@ -143,7 +154,9 @@ PowerShell 的 `curl` 是 `Invoke-WebRequest` 别名，会破坏 JSON 引号转�
 gemini-web2api-go 默认每 IP 并发 5 / RPM 30 / RPH 80。频繁 429 时可在其管理台调高，或接入 Cookie 池 / 代理池（见其官方文档）。
 
 **哪些模型可用？**
-匿名模式：`gemini-3.6-flash`、`gemini-3.5-flash-lite`。`gemini-3.1-pro` 及 `-thinking` 变体需要在上游配置 Google 账号 Cookie。
+匿名模式：`gpt-5.6` / `gpt-6`（映射到上游 `gemini-3.6-flash`）与 `gpt-5.6-mini`（映射到
+`gemini-3.5-flash-lite`）。上游 `gemini-3.1-pro` 及 `-thinking` 变体需要在其管理台配置
+Google 账号 Cookie 后，在渠道里补映射即可。
 
 ---
 
