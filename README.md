@@ -47,13 +47,18 @@
 CPoxyApiByXyls/
 ├── README.md                  # 本文件
 ├── LICENSE
+├── bin/
+│   ├── new-api/new-api.exe.zip        # 网关本体（官方 Release 打包）
+│   └── gemini-web2api-go/             # 反代本体（官方 Release 二进制）
 ├── config/
-│   └── channel.example.json   # new-api 渠道配置模板
+│   ├── codex/cpoxy.config.toml        # Codex CLI profile 模板
+│   └── channel.example.json           # new-api 渠道配置模板
 ├── docs/
 │   ├── architecture.md        # 架构与请求链路
-│   ├── deployment.md          # 从零部署手册（构建 + 初始化 + 配置）
+│   ├── deployment.md          # 从零部署手册
 │   └── api-paradigms.md       # Coding API 调用范式（SDK/GUI/命令行）
 └── scripts/
+    ├── setup.ps1              # 解压 + 配置 + Defender 排除（幂等，可重复执行）
     ├── start-all.ps1          # 一键启动（上游 + 网关）
     ├── stop-all.ps1           # 一键停止
     └── test-api.ps1           # 端到端连通性自检
@@ -66,20 +71,19 @@ CPoxyApiByXyls/
 ### 0. 前置条件
 
 - Windows 10/11，PowerShell 5.1+（系统自带）
-- 已就绪两个组件（获取方式见 [docs/deployment.md](docs/deployment.md)）：
-  - `new-api.exe`（new-api 网关，编译或 Release 下载）
-  - `gemini-web2api-go`（上游，Release 下载单文件即可）
+- 无需 Go / Node / Bun：网关与反代本体已随仓库附带（`bin/`）
 
-### 1. 配置路径
-
-脚本通过环境变量定位组件，编辑后运行，或在运行前设置：
+### 1. 克隆 + 安装
 
 ```powershell
-$env:NEWAPI_DIR      = "E:\cpa\new-api"                          # new-api 所在目录（含 new-api.exe）
-$env:GEMINI_API_DIR  = "E:\gemini-webapi-go\gemini-web2api-go"   # 上游所在目录（含 bin\gemini-web2api-go.exe）
+git clone https://github.com/xyls999/CPoxyApiByXyls
+cd CPoxyApiByXyls
+.\scripts\setup.ps1
 ```
 
-不设置时使用上述同款默认值。
+`setup.ps1` 做四件事：解压网关 → 校验/补齐反代 → 写入上游配置（仅监听 127.0.0.1）→
+尝试加 Defender 排除目录。全部幂等，已就绪的组件自动跳过；`bin/` 缺失时自动回退为
+从上游官方 Release 下载（带 SHA256 校验）。
 
 ### 2. 启动
 

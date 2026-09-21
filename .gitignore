@@ -3,7 +3,7 @@
 *.db-wal
 *.log
 .env
-*.exe
+bin/new-api/new-api.exe
 node_modules/
 dist/
 .vscode/

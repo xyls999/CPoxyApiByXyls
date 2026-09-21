@@ -5,11 +5,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not $NewApiDir)     { $NewApiDir     = $env:NEWAPI_DIR;     if (-not $NewApiDir)     { $NewApiDir     = "E:\cpa\new-api" } }
-if (-not $GeminiApiDir)  { $GeminiApiDir  = $env:GEMINI_API_DIR; if (-not $GeminiApiDir)  { $GeminiApiDir  = "E:\gemini-webapi-go\gemini-web2api-go" } }
+if (-not $NewApiDir) {
+    $NewApiDir = $env:NEWAPI_DIR
+    if (-not $NewApiDir) { $NewApiDir = Join-Path (Split-Path -Parent $PSScriptRoot) "bin\new-api" }
+}
+if (-not $GeminiApiDir) {
+    $GeminiApiDir = $env:GEMINI_API_DIR
+    if (-not $GeminiApiDir) { $GeminiApiDir = Join-Path (Split-Path -Parent $PSScriptRoot) "bin\gemini-web2api-go" }
+}
 
 $gatewayExe  = Join-Path $NewApiDir "new-api.exe"
-$upstreamExe = Join-Path $GeminiApiDir "bin\gemini-web2api-go.exe"
+$upstreamExe = Join-Path $GeminiApiDir "gemini-web2api-go.exe"
 
 if (-not (Test-Path $gatewayExe))  { throw "new-api.exe not found: $gatewayExe" }
 if (-not (Test-Path $upstreamExe)) { throw "gemini-web2api-go.exe not found: $upstreamExe" }

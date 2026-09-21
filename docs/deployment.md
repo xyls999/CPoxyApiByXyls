@@ -4,53 +4,46 @@
 
 ## 1. 获取组件
 
-### 1.1 gemini-web2api-go（上游）
+### 方式 A：仓库自带（推荐）
 
-方式 A：Release 直下（推荐，零构建）
+本体已随仓库附带：`bin/new-api/new-api.exe.zip`（网关）与
+`bin/gemini-web2api-go/gemini-web2api-go.exe`（反代）。克隆后运行
+`.\scripts\setup.ps1` 即完成解压与配置，无需下载与构建。
 
-到 <https://github.com/zexadev/gemini-web2api-go/releases> 下载对应平台的单文件（Windows 为
-`gemini-web2api-go_windows_amd64.exe` 之类命名），放到任意目录，例如：
+### 方式 B：官方 Release 直下（bin/ 缺失时的自动回退）
 
-```
-E:\gemini-webapi-go\gemini-web2api-go\
-└── bin\gemini-web2api-go.exe
-```
+`setup.ps1` 会自动从上游官方 Release 下载并做 SHA256 校验：
 
-方式 B：源码构建（需要 Go 1.21+）
+- 网关：<https://github.com/QuantumNous/new-api/releases>
+- 反代：<https://github.com/zexadev/gemini-web2api-go/releases>
 
-```powershell
-git clone https://github.com/zexadev/gemini-web2api-go E:\gemini-webapi-go\gemini-web2api-go
-cd E:\gemini-webapi-go\gemini-web2api-go
-go build -o bin\gemini-web2api-go.exe .
-```
+### 方式 C：源码构建
 
-### 1.2 new-api（网关）
-
-方式 A：Release 下载
-
-到 <https://github.com/QuantumNous/new-api/releases> 下载 Windows 二进制，放到
-`E:\cpa\new-api\new-api.exe`。
-
-方式 B：源码构建（本方案验证过的路径）
-
-前置：Go 1.25+、Bun（前端构建用）。
+需要 Go 1.21+（反代）/ Go 1.25+ 与 Bun（网关）：
 
 ```powershell
-git clone https://github.com/QuantumNous/new-api E:\cpa\new-api
-cd E:\cpa\new-api\web
+# 反代
+git clone https://github.com/zexadev/gemini-web2api-go <任意目录>\gemini-web2api-go
+cd <任意目录>\gemini-web2api-go
+go build -o gemini-web2api-go.exe .
+
+# 网关（必须先构建前端，go:embed 需要 web\dist）
+git clone https://github.com/QuantumNous/new-api <任意目录>\new-api
+cd <任意目录>\new-api\web
 bun install
-bun run build          # 产物 web\dist，后端 go:embed 需要
+bun run build
 cd ..
 go build -o new-api.exe .
 ```
+
+自建组件放到 `bin\new-api\` 与 `bin\gemini-web2api-go\`（与仓库默认路径一致），
+或用环境变量 `NEWAPI_DIR` / `GEMINI_API_DIR` 指向任意位置。
 
 > 注意：必须先构建前端，否则 `go build` 报 `pattern web/dist: no matching files found`。
 
 ## 2. 启动
 
 ```powershell
-$env:NEWAPI_DIR     = "E:\cpa\new-api"
-$env:GEMINI_API_DIR = "E:\gemini-webapi-go\gemini-web2api-go"
 .\scripts\start-all.ps1
 ```
 
