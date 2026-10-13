@@ -33,6 +33,33 @@
 
 ---
 
+## 来源接入状态与调用
+
+现有 Gemini 仍由 `new-api` 转发。另提供独立的学习通 OpenAI 协议适配器，启动方式：
+
+```powershell
+.\scripts\start-chaoxing.ps1 -ChaoxingDir 'C:\Black hacker\chaoxing-ai-web'
+.\scripts\check-sources.ps1 -ChatgptConfigPath 'E:\chatgpt-web2api-trial\.runtime\config.json'
+```
+
+| 来源 | 本机服务 | new-api 渠道 | 可用条件 |
+|---|---|---|---|
+| Gemini Web | `127.0.0.1:8083` | `gemini-web2api-go` | 上游密钥匹配且能连接 Gemini 网页；服务监听或模型列表不等于真实回答成功 |
+| 学习通课程 AI | `127.0.0.1:8787` → 协议适配 `127.0.0.1:8788` | `chaoxing-course-ai`，模型 `chaoxing-course-ai` | 本人正常登录课程、机器人就绪、真实问答成功后才启用 |
+| ChatGPT Web | ChatGPT-Web2API `127.0.0.1:18080` | `chatgpt-web-browser`，模型 `chatgpt-web-auto` 映射 `auto` | 独立浏览器已登录且真实问答成功后才启用；不要复用 Codex Full 模式 |
+
+所有未通过真实问答验收的来源都须保留**禁用状态**（包括 Gemini）；在本机当前实例中三个渠道均设为禁用，`/v1/models` 暂为空。不能因为 HTTP `/health` 或 `/v1/models` 返回 200 就宣称可调用。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
+
+在 `E:\cpa\new-api` 这一已有配置的网关实例中启动时要显式指定目录，避免切换到 `bin\new-api` 里未初始化的另一份数据库：
+
+```powershell
+.\scripts\start-all.ps1 -NewApiDir 'E:\cpa\new-api' -GeminiProxy 'http://127.0.0.1:7897'
+```
+
+`-GeminiProxy` 仅在**启动** Gemini 服务时生效；服务已在 8083 监听时脚本不会更改代理。`start-chaoxing.ps1` 启动时对 `.runtime/` 限制文件访问权限；关闭时使用 `stop-chaoxing.ps1`，会先让适配器拒绝新请求、等待活跃请求清理完成，超时则拒绝强制停止。Gemini 上游不读取 `HTTPS_PROXY` 环境变量，可用 `-GeminiProxy` 显式设置；若无需代理则省略该选项。渠道模板见 `config/additional-channels.example.json`，接入前请在管理台用实际密钥替换占位符，并保持 `status=2`，直到端到端问答验收成功。
+
+> ChatGPT-Web2API 是独立的第三方试验依赖，脚本不自动安装它、不读取/复制 ChatGPT 登录态，也不自动开放其渠道。学习通网页账号告警需要本人处理，不自动重试结果不确定的发送请求。
+
 ## 特性
 
 - **开箱即用**：一键启动脚本 + 一键连通性自检脚本

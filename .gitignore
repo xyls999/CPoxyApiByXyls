@@ -2,6 +2,7 @@
 *.db-shm
 *.db-wal
 *.log
+.runtime/
 .env
 bin/new-api/new-api.exe
 node_modules/

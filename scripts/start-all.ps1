@@ -1,6 +1,7 @@
 param(
     [string]$NewApiDir,
-    [string]$GeminiApiDir
+    [string]$GeminiApiDir,
+    [string]$GeminiProxy = $env:GEMINI_PROXY_URL
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,10 +42,20 @@ function Wait-Port([int]$Port, [string]$Name) {
 
 if (-not (Test-Port 8083)) {
     Write-Host "starting upstream: $upstreamExe"
-    Start-Process -FilePath $upstreamExe -WorkingDirectory $GeminiApiDir `
-        -RedirectStandardOutput (Join-Path $GeminiApiDir "data\server.stdout.log") `
-        -RedirectStandardError  (Join-Path $GeminiApiDir "data\server.stderr.log") `
-        -WindowStyle Hidden
+    $upstreamArgs = @()
+    if ($GeminiProxy) {
+        if ($GeminiProxy -notmatch '^http://127\.0\.0\.1:\d{1,5}$') { throw 'GeminiProxy must point to a local HTTP proxy on 127.0.0.1' }
+        $upstreamArgs = @('--proxy', $GeminiProxy)
+    }
+    $upstreamStart = @{
+        FilePath = $upstreamExe
+        WorkingDirectory = $GeminiApiDir
+        RedirectStandardOutput = Join-Path $GeminiApiDir 'data\server.stdout.log'
+        RedirectStandardError = Join-Path $GeminiApiDir 'data\server.stderr.log'
+        WindowStyle = 'Hidden'
+    }
+    if ($upstreamArgs.Count) { $upstreamStart.ArgumentList = $upstreamArgs }
+    Start-Process @upstreamStart
 } else {
     Write-Host "[SKIP] upstream already on :8083"
 }

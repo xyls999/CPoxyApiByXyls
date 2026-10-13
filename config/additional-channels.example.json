@@ -1,0 +1,24 @@
+[
+  {
+    "type": 1,
+    "name": "chaoxing-course-ai",
+    "status": 2,
+    "key": "<.runtime/chaoxing-keys.json:bridge_key>",
+    "base_url": "http://127.0.0.1:8788",
+    "models": "chaoxing-course-ai",
+    "group": "default",
+    "model_mapping": "",
+    "remark": "需本人恢复学习通登录并完成真实问答，验证前保持禁用"
+  },
+  {
+    "type": 1,
+    "name": "chatgpt-web-browser",
+    "status": 2,
+    "key": "<ChatGPT-Web2API 独立服务访问密钥>",
+    "base_url": "http://127.0.0.1:18080",
+    "models": "chatgpt-web-auto",
+    "group": "default",
+    "model_mapping": "{\"chatgpt-web-auto\":\"auto\"}",
+    "remark": "需真实 ChatGPT Web 问答验证通过，验证前保持禁用"
+  }
+]
