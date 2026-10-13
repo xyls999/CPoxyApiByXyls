@@ -190,12 +190,10 @@ gemini-web2api-go 默认每 IP 并发 5 / RPM 30 / RPH 80。频繁 429 时可在
 
 ## 致谢与许可
 
-本仓库只包含**部署脚本、配置模板与文档**，不包含任何上游源码或二进制。
+`bin/` 包含第三方上游可执行文件；Gemini Web 代理已替换为 [官方 v4.21.0 Windows x64 release](https://github.com/zexadev/gemini-web2api-go/releases/tag/v4.21.0)，下载时已对照同一 release 的 `SHA256SUMS.txt` 校验。上游源码不在本仓库；第三方程序分别遵循自身许可证。本项目自编写的桥接器、脚本和文档以 [MIT](LICENSE) 发布。
 
 - [new-api](https://github.com/QuantumNous/new-api)（Apache-2.0）— QuantumNous
 - [gemini-web2api-go](https://github.com/zexadev/gemini-web2api-go)（MIT）— zexadev
-
-本项目文件以 [MIT](LICENSE) 发布。
 
 ## 免责声明
 
