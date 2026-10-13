@@ -48,7 +48,7 @@
 | 学习通课程 AI | `127.0.0.1:8787` → 协议适配 `127.0.0.1:8788` | `chaoxing-course-ai`，模型 `chaoxing-course-ai` | 本人正常登录课程、机器人就绪、真实问答成功后才启用 |
 | ChatGPT Web | ChatGPT-Web2API `127.0.0.1:18080` | `chatgpt-web-browser`，模型 `chatgpt-web-auto` 映射 `auto` | 独立浏览器已登录且真实问答成功后才启用；不要复用 Codex Full 模式 |
 
-所有未通过真实问答验收的来源都须保留**禁用状态**（包括 Gemini）；在本机当前实例中三个渠道均设为禁用，`/v1/models` 暂为空。不能因为 HTTP `/health` 或 `/v1/models` 返回 200 就宣称可调用。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
+当前实例的首页使用 [config/home-page.md](config/home-page.md) 作为 `HomePageContent`，展示各来源的**人工验收快照**（不是持续在线监测），可在管理台系统设置中更新。未通过真实问答验收的来源须保留**禁用状态**。本机现已用官方校验和验证的 Gemini v4.21.0，通过 new-api 完成 `gemini-3.5-flash-lite` 的普通和 SSE 问答（均回答 OK）；`gemini-3.6-flash` 也已通过 new-api 真实问答。Gemini 渠道启用，学习通和 ChatGPT Web 仍禁用。仅监听、健康检查或模型列表返回 200 都不等于问答成功。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
 
 在 `E:\cpa\new-api` 这一已有配置的网关实例中启动时要显式指定目录，避免切换到 `bin\new-api` 里未初始化的另一份数据库：
 
@@ -135,10 +135,9 @@ $env:CODING_API_KEY = "sk-你的网关令牌"
 |---|---|
 | Base URL | `http://127.0.0.1:3000/v1` |
 | API Key | new-api 管理台发放的 `sk-…` 令牌 |
-| Model | `gpt-5.6`（首选）/ `gpt-6` / `gpt-5.6-mini`（低延迟） |
+| Model | `gemini-3.5-flash-lite` / `gemini-3.6-flash`（均已验证） |
 
-模型名在网关做映射（`gpt-*` → 上游 Gemini 模型），对客户端只暴露 GPT 命名；
-原始 `gemini-*` 名称同样可用。新注册账号默认赠送 $1,000,000 额度。
+当前仅开放真实 Gemini 名称。配置模板中原有的 `gpt-*` 别名并非 GPT 模型，且尚未验证，已从当前实例的模型列表隐藏。新注册账号默认赠送 $1,000,000 额度（这是本机配置，不代表实际付费余额）。
 
 **Codex CLI 专用**：把 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 复制为
 `%USERPROFILE%\.codex\cpoxy.config.toml`，替换其中的 `<GATEWAY-HOST>` 和 `<GATEWAY-TOKEN>`
@@ -162,7 +161,7 @@ client = OpenAI(
     api_key="sk-你的网关令牌",
 )
 resp = client.chat.completions.create(
-    model="gpt-5.6",
+    model="gemini-3.5-flash-lite",
     messages=[{"role": "user", "content": "解释这段代码"}],
 )
 print(resp.choices[0].message.content)
@@ -185,9 +184,7 @@ PowerShell 的 `curl` 是 `Invoke-WebRequest` 别名，会破坏 JSON 引号转�
 gemini-web2api-go 默认每 IP 并发 5 / RPM 30 / RPH 80。频繁 429 时可在其管理台调高，或接入 Cookie 池 / 代理池（见其官方文档）。
 
 **哪些模型可用？**
-匿名模式：`gpt-5.6` / `gpt-6`（映射到上游 `gemini-3.6-flash`）与 `gpt-5.6-mini`（映射到
-`gemini-3.5-flash-lite`）。上游 `gemini-3.1-pro` 及 `-thinking` 变体需要在其管理台配置
-Google 账号 Cookie 后，在渠道里补映射即可。
+运行 `GET /v1/models` 查看当前开放模型。本机已验证 `gemini-3.5-flash-lite` 与 `gemini-3.6-flash` 的真实回答；学习通和 ChatGPT Web 暂未开放。原模板中的 `gpt-*` 只是 Gemini 映射别名，并非真正的 GPT 模型，因此当前已隐藏。
 
 ---
 
