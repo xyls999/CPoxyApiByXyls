@@ -29,7 +29,7 @@
 |---|---|---|
 | new-api | API 网关：令牌发放、渠道管理、请求转发、用量统计 | 3000 |
 | gemini-web2api-go | 上游：把 Gemini Web 页面协议转成 OpenAI 兼容 API | 8083 |
-| Gemini Web | 实际模型后端（gemini-3.6-flash / gemini-3.5-flash-lite） | - |
+| Gemini Web | 实际模型后端（当前仅开放 gemini-3.5-flash-lite） | - |
 
 ---
 
@@ -44,12 +44,12 @@
 
 | 来源 | 本机服务 | new-api 渠道 | 可用条件 |
 |---|---|---|---|
-| Gemini Web | `127.0.0.1:8083` | `gemini-web2api-go` | 官方 v4.21.0，已验证两种 Flash 模型 |
-| 4 Argon（实验） | `127.0.0.1:18083` | `gemini-4-argon-experimental`，模型 `gemini-4-argon` | [上游 PR #37](https://github.com/zexadev/gemini-web2api-go/pull/37) 指定提交的隔离构建；已核对实际上游模型并通过网关普通/SSE 问答，未合并、可能失效 |
+| Gemini Web | `127.0.0.1:8083` | `gemini-web2api-go`；当前开放 Flash-Lite | 官方 v4.21.0，Flash-Lite 已通过真实回答和 SSE；Flash 近期返回错误致歉，已暂停 |
+| 4 Argon（实验） | `127.0.0.1:18083` | `gemini-4-argon-experimental`，当前开放 | [上游 PR #37](https://github.com/zexadev/gemini-web2api-go/pull/37) 隔离构建；重新登录后经网关普通/SSE 问答通过，实际上游为 4 Argon；仍可能随时失效 |
 | 学习通课程 AI | `127.0.0.1:8787` → 协议适配 `127.0.0.1:8788` | `chaoxing-course-ai`，模型 `chaoxing-course-ai` | 本人正常登录课程、机器人就绪、真实问答成功后才启用 |
-| ChatGPT Web | ChatGPT-Web2API `127.0.0.1:18080` | `chatgpt-web-browser`，模型 `chatgpt-web-auto` 映射 `auto` | 独立浏览器已登录且真实问答成功后才启用；不要复用 Codex Full 模式 |
+| ChatGPT Web | ChatGPT-Web2API `127.0.0.1:18080` | `chatgpt-web-browser`，模型 `chatgpt-web-gpt-5-5` 映射 `gpt-5-5` | 独立网页登录态下，修复 DOM 消息漏检后经本网关普通/SSE 问答通过；不等于 Codex 官方账号或 API |
 
-当前实例的首页使用 [config/home-page.html](config/home-page.html) 作为 `HomePageContent`，保留 [Markdown 回退文案](config/home-page.md)。页面展示各来源的**人工验收快照**（不是持续在线监测），并使用 new-api 原有登录、注册与令牌系统；可在管理台系统设置中更新。未通过真实问答验收的来源须保留**禁用状态**。本机现已用官方校验和验证的 Gemini v4.21.0，通过 new-api 完成 `gemini-3.5-flash-lite` 的普通和 SSE 问答（均回答 OK）；`gemini-3.6-flash` 也已通过 new-api 真实问答。Gemini 与隔离的 Argon 实验渠道启用，学习通和 ChatGPT Web 仍禁用。仅监听、健康检查或模型列表返回 200 都不等于问答成功。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
+当前实例的首页使用 [config/home-page.html](config/home-page.html) 作为 `HomePageContent`，保留 [Markdown 回退文案](config/home-page.md)。页面展示各来源的**人工验收快照**（不是持续在线监测），并使用 new-api 原有登录、注册与令牌系统；可在管理台系统设置中更新。未通过真实问答验收的来源须保留**禁用状态**。本机现已用官方校验和验证的 Gemini v4.21.0，通过 new-api 完成 `gemini-3.5-flash-lite` 的普通和 SSE 问答（均回答 OK）；`gemini-3.6-flash` 曾通过真实问答，但近次返回错误致歉，现已禁用；Argon 换用本机新会话后经本网关普通及 SSE 问答复验通过并开放；ChatGPT Web 修复回答漏检并通过同样验收后开放，学习通仍禁用。仅监听、健康检查或模型列表返回 200 都不等于问答成功。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
 
 在 `E:\cpa\new-api` 这一已有配置的网关实例中启动时要显式指定目录，避免切换到 `bin\new-api` 里未初始化的另一份数据库：
 
@@ -138,17 +138,11 @@ $env:CODING_API_KEY = "sk-你的网关令牌"
 |---|---|
 | Base URL | `http://127.0.0.1:3000/v1` |
 | API Key | new-api 管理台发放的 `sk-…` 令牌 |
-| Model | `gemini-3.5-flash-lite` / `gemini-3.6-flash` / `gemini-4-argon`（最后一个为实验渠道） |
+| Model | 当前开放 `gemini-3.5-flash-lite`、实验性 `gemini-4-argon`、`chatgpt-web-gpt-5-5`；学习通仍待验收 |
 
 当前仅开放真实 Gemini 名称。配置模板中原有的 `gpt-*` 别名并非 GPT 模型，且尚未验证，已从当前实例的模型列表隐藏。新注册账号默认赠送 **10 亿基准 token 等值**内部额度：按本项目基准价 $0.002/千 token、500000 quota/USD 折算为 `QuotaForNewUser=1000000000000`（显示为 $2,000,000 站内额度，非真实现金）。不同模型和输入/输出单价会改变实际可用 token 数，**不是跨模型固定 10 亿 token 硬上限**；该站内积分仅供本机可信内网测试，公开运营前须补 HTTPS 和防批量注册。
 
-**Codex CLI 专用**：把 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 复制为
-`%USERPROFILE%\.codex\cpoxy.config.toml`，替换其中的 `<GATEWAY-HOST>` 和 `<GATEWAY-TOKEN>`
-（密钥直接内联在 `experimental_bearer_token`，无需环境变量），然后 `codex --profile cpoxy` 启动：
-
-```powershell
-codex --profile cpoxy
-```
+**Codex CLI 专用**：将 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 合并到 `%USERPROFILE%\.codex\config.toml`，替换 `<GATEWAY-HOST>`；仅在本机环境变量 `CPOXY_API_KEY` 设置自己的网关令牌，不在 TOML 里写令牌。模板默认用已通过 Codex CLI 0.157.1 Responses 真实问答的 `gemini-3.5-flash-lite`；实验性 `gemini-4-argon` 也通过 Responses 普通/SSE 及 CLI 基本文本任务，可按需改 `model`（复杂工具调用未验收）。ChatGPT Web 当前只有聊天接口、无 `/v1/responses`，不能作为 Codex CLI provider。若希望不覆盖官方默认模型，将模板顶部两行放到 `[profiles.cpoxy]`，再运行 `codex --profile cpoxy`。分来源的接口状态见 [docs/api-paradigms.md](docs/api-paradigms.md)。
 
 ---
 
@@ -184,10 +178,10 @@ PowerShell 的 `curl` 是 `Invoke-WebRequest` 别名，会破坏 JSON 引号转�
 `Add-MpPreference -ExclusionPath "<目录>"`。
 
 **上游限流？**
-gemini-web2api-go 默认每 IP 并发 5 / RPM 30 / RPH 80。频繁 429 时可在其管理台调高，或接入 Cookie 池 / 代理池（见其官方文档）。
+实验 Argon 上游配置了每出口并发 5 / RPM 30 / RPH 80。但 `ip_slot_full` 不一定表示计数真的打满：本次在计数未满时账号失效仍返回 429。先看管理端账号、出口及 `/admin/api/usage`，不要盲目重试或调高限额。
 
 **哪些模型可用？**
-运行 `GET /v1/models` 查看当前开放模型。本机已验证 `gemini-3.5-flash-lite` 与 `gemini-3.6-flash` 的真实回答，并在独立实验渠道验证了 `gemini-4-argon` 的实际模型、普通与 SSE 问答；学习通和 ChatGPT Web 暂未开放。原模板中的 `gpt-*` 只是 Gemini 映射别名，并非真正的 GPT 模型，因此当前已隐藏。
+运行 `GET /v1/models` 仅能查看配置，不能替代真实问答验收。当前开放 `gemini-3.5-flash-lite`、复验通过的实验性 `gemini-4-argon` 及 `chatgpt-web-gpt-5-5`；Flash 已暂停，学习通仍禁用。原模板中的 `gpt-*` 只是 Gemini 映射别名，并非真正的 GPT 模型，当前已隐藏。
 
 ---
 

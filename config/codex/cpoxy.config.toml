@@ -1,9 +1,8 @@
-model = "gpt-5.6"
+model = "gemini-3.5-flash-lite"
 model_provider = "cpoxy"
-model_reasoning_effort = "high"
 
 [model_providers.cpoxy]
 name = "CPoxy"
 base_url = "http://<GATEWAY-HOST>:3000/v1"
 wire_api = "responses"
-experimental_bearer_token = "sk-<GATEWAY-TOKEN>"
+env_key = "CPOXY_API_KEY"

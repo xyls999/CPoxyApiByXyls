@@ -53,19 +53,19 @@
         <div class="cpa-actions"><a class="cpa-button cpa-button-primary" href="/sign-up">注册并开始使用 →</a><a class="cpa-button" href="/sign-in">已有账号？登录</a><a class="cpa-button" href="/playground">在线试用</a></div>
         <p class="cpa-gift"><strong>新用户赠送基准 10 亿 token 等值额度。</strong> 按基准价格折算为站内余额，<b>非固定 token 数</b>；不同模型按其实际计费消耗。</p>
       </section>
-      <aside class="cpa-preview" aria-label="已验收模型摘要">
-        <div class="cpa-preview-head"><span>可用模型 · 验收快照</span><span>● 已完成真实问答</span></div>
-        <div class="cpa-flow"><div><b>Gemini Flash-Lite</b><code>gemini-3.5-flash-lite</code></div><div><b>Gemini Flash</b><code>gemini-3.6-flash</code></div><div><b>4 Argon · 实验</b><code>gemini-4-argon</code></div></div>
+      <aside class="cpa-preview" aria-label="当前开放模型摘要">
+        <div class="cpa-preview-head"><span>可用模型 · 复验快照</span><span>● 已完成真实问答</span></div>
+        <div class="cpa-flow"><div><b>Gemini Flash-Lite</b><code>gemini-3.5-flash-lite</code></div><div><b>4 Argon · 实验</b><code>gemini-4-argon</code></div><div><b>ChatGPT Web</b><code>chatgpt-web-gpt-5-5</code></div></div>
         <div class="cpa-preview-footer">API Base URL · http://127.0.0.1:3000/v1</div>
       </aside>
     </div>
     <section aria-label="来源验收状态">
       <div class="cpa-section-head"><h2>来源，一目了然</h2><p>以下是上次人工验收结果，不是持续在线监测</p></div>
       <div class="cpa-grid">
-        <article class="cpa-card" data-source="gemini"><div class="cpa-card-top"><h3>Gemini Web</h3><span class="cpa-chip cpa-chip-on">已验证</span></div><p>两个 Flash 模型经网关真实回答；Flash-Lite 的 SSE 流式结束已验收。</p><div class="cpa-card-foot"><code>gemini-3.5-flash-lite</code></div></article>
-        <article class="cpa-card" data-source="argon"><div class="cpa-card-top"><h3>4 Argon</h3><span class="cpa-chip cpa-chip-on">实验 · 已验证</span></div><p>普通与流式问答通过；核对实际上游模型为 4 Argon。使用尚未合并的开源版本，可能随时失效。</p><div class="cpa-card-foot"><code>gemini-4-argon</code></div></article>
+        <article class="cpa-card" data-source="gemini"><div class="cpa-card-top"><h3>Gemini Web</h3><span class="cpa-chip cpa-chip-on">Flash-Lite · 已验证</span></div><p>Flash-Lite 经网关真实回答且通过流式验收；Flash 近期返回错误致歉，暂停开放并等待复验。</p><div class="cpa-card-foot"><code>gemini-3.5-flash-lite</code></div></article>
+        <article class="cpa-card" data-source="argon"><div class="cpa-card-top"><h3>4 Argon</h3><span class="cpa-chip cpa-chip-on">实验 · 已验证</span></div><p>新登录态经网关普通及 SSE 问答通过，实际上游模型为 4 Argon。基于尚未合并的实验版本，若失效会再次下线。</p><div class="cpa-card-foot"><code>gemini-4-argon</code></div></article>
         <article class="cpa-card" data-source="chaoxing"><div class="cpa-card-top"><h3>学习通课程 AI</h3><span class="cpa-chip cpa-chip-off">待验收 · 禁用</span></div><p>等待本人完成课程登录、机器人就绪及端到端真实问答；不会把浏览器进程等同可用。</p><div class="cpa-card-foot">验证通过后再开放</div></article>
-        <article class="cpa-card" data-source="chatgpt"><div class="cpa-card-top"><h3>ChatGPT Web</h3><span class="cpa-chip cpa-chip-off">待验收 · 禁用</span></div><p>网页登录可识别，但此前回答卡在 generation_stuck；查明原因并得到真实回答前不开放。</p><div class="cpa-card-foot">验证通过后再开放</div></article>
+        <article class="cpa-card" data-source="chatgpt"><div class="cpa-card-top"><h3>ChatGPT Web</h3><span class="cpa-chip cpa-chip-on">已验证 · 网页</span></div><p>修复新版页面回答漏检后，已通过本网关普通及 SSE 真实问答；以网页账号运行，登录态失效会下线。</p><div class="cpa-card-foot"><code>chatgpt-web-gpt-5-5</code></div></article>
       </div>
     </section>
     <div class="cpa-bottom"><p>站内登录与注册由 new-api 原有认证系统处理。当前入口仅适用于可信内网；HTTP 尚未加密，切勿在不可信 WLAN 输入密码或令牌。真实 Cookie 不进入此页面。</p><a class="cpa-quiet-link" href="/models">查看已开放模型 →</a></div>

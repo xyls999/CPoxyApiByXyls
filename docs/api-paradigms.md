@@ -1,22 +1,14 @@
 # Coding API 调用范式
 
-网关对外 100% OpenAI 兼容。以下所有示例的三个常量：
+网关提供 OpenAI 兼容的聊天接口；Responses 及流式能力须按具体模型验收，不等同支持所有 OpenAI 端点。当前示例只使用仍开放且经过真实问答的 Flash-Lite：
 
 ```
 BASE_URL = http://127.0.0.1:3000/v1
-API_KEY  = sk-<new-api 网关令牌>
-MODEL    = gpt-5.6   # 或 gpt-6 / gpt-5.6-mini / gemini-3.6-flash
+API_KEY  = <仅存放在本机的 new-api 网关令牌>
+MODEL    = gemini-3.5-flash-lite
 ```
 
-模型名映射（在 new-api 渠道的 model_mapping 中配置）：
-
-| 对外模型名 | 上游实际模型 |
-|---|---|
-| `gpt-5.6` | gemini-3.6-flash |
-| `gpt-6` | gemini-3.6-flash |
-| `gpt-5.6-mini` | gemini-3.5-flash-lite |
-
-新注册账号默认赠送 $1,000,000 额度（`QuotaForNewUser=500000000000`，500000 配额 = $1）。
+历史 `gpt-5.6` / `gpt-6` / `gpt-5.6-mini` 是 Gemini 别名，**不是真正的 GPT 模型且已禁用**，不要用作 Codex 默认模型。新注册账号赠送 `QuotaForNewUser=1000000000000` 内部额度，按既定基准价折算为 **10 亿基准 token 等值**，并非现金或跨模型固定 token 数。
 
 ## 1. Python / OpenAI SDK
 
@@ -27,14 +19,14 @@ client = OpenAI(base_url="http://127.0.0.1:3000/v1", api_key="sk-…")
 
 # 非流式
 resp = client.chat.completions.create(
-    model="gpt-5.6",
+    model="gemini-3.5-flash-lite",
     messages=[{"role": "user", "content": "Review this code:\n..."}],
 )
 print(resp.choices[0].message.content)
 
 # 流式
 stream = client.chat.completions.create(
-    model="gpt-5.6",
+    model="gemini-3.5-flash-lite",
     messages=[{"role": "user", "content": "写一个快速排序"}],
     stream=True,
 )
@@ -49,13 +41,9 @@ for chunk in stream:
 Codex 只支持 Responses 协议（`wire_api = "responses"`，旧版 `wire_api = "chat"` 已移除），
 网关的 `POST /v1/responses` 已实现协议转换，直接可用。
 
-1. 复制模板：`config/codex/cpoxy.config.toml` → `%USERPROFILE%\.codex\cpoxy.config.toml`，
-   并替换 `<GATEWAY-HOST>`（本机 `127.0.0.1`，局域网 `10.113.5.51`）和 `<GATEWAY-TOKEN>`（网关令牌）。
-2. 无需环境变量：密钥直接内联在 `experimental_bearer_token` 字段。
-
-   也支持环境变量方式：provider 写 `env_key = "CPOXY_API_KEY"` 后
-   `setx CPOXY_API_KEY "sk-…"`。
-3. 以 profile 启动：
+1. 将 `config/codex/cpoxy.config.toml` 的内容合并到本机 `%USERPROFILE%\.codex\config.toml`，替换 `<GATEWAY-HOST>`（本机 `127.0.0.1`，可信内网用实际网关 IP）。
+2. 在**本机进程环境**设置 `CPOXY_API_KEY` 为自己的网关令牌；模板只使用 `env_key`，**不要在 TOML、聊天或仓库中内联密钥**。例如仅对当前 PowerShell 会话：`$env:CPOXY_API_KEY = '<本人令牌>'`。不同用户使用自己的令牌。
+3. 直接运行 `codex` 使用模板默认模型；若要保留官方默认配置，把模板前两行放入 `[profiles.cpoxy]`，再显式启动 `codex --profile cpoxy`。
 
    ```powershell
    codex --profile cpoxy
@@ -65,10 +53,10 @@ Codex 只支持 Responses 协议（`wire_api = "responses"`，旧版 `wire_api =
 
 ```powershell
 $env:CPOXY_API_KEY = "sk-…"
-codex exec --profile cpoxy --skip-git-repo-check -C <工作目录> "Reply with exactly: OK"
+codex exec --skip-git-repo-check -C <工作目录> "Reply with exactly: OK"
 ```
 
-该 profile 只在显式 `--profile cpoxy` 时生效，不影响 Codex 默认的官方 ChatGPT 登录配置。
+使用 profile 时保留 `[model_providers.cpoxy]` 公共配置，并在上面的验证命令里加入 `--profile cpoxy`。Codex CLI 0.157.1 曾通过网关 Responses + Flash-Lite 返回真实回答。
 
 ## 3. Cursor / Cherry Studio / ChatBox 等 GUI
 
@@ -79,7 +67,7 @@ codex exec --profile cpoxy --skip-git-repo-check -C <工作目录> "Reply with e
 | Provider 类型 | OpenAI / 自定义 OpenAI 兼容 |
 | Base URL | `http://127.0.0.1:3000/v1`（要求不带 /v1 的就填 `http://127.0.0.1:3000`） |
 | API Key | 网关令牌 |
-| 模型 | 手动填 `gemini-3.6-flash` |
+| 模型 | 手动填 `gemini-3.5-flash-lite` |
 
 ## 4. PowerShell（原生，规避 curl 别名坑）
 
@@ -87,7 +75,7 @@ PowerShell 的 `curl` 是 `Invoke-WebRequest` 别名，会破坏 JSON 转义；�
 
 ```powershell
 $body = @{
-    model    = "gemini-3.6-flash"
+    model    = "gemini-3.5-flash-lite"
     messages = @(@{ role = "user"; content = "say OK" })
 } | ConvertTo-Json -Depth 5
 [IO.File]::WriteAllText("$env:TEMP\req.json", $body)
@@ -104,7 +92,7 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:3000/v1/chat/completions" 
 curl http://127.0.0.1:3000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk-…" \
-  -d '{"model":"gemini-3.6-flash","messages":[{"role":"user","content":"hi"}]}'
+  -d '{"model":"gemini-3.5-flash-lite","messages":[{"role":"user","content":"hi"}]}'
 ```
 
 Windows cmd 下用 `curl.exe`（带 `.exe` 后缀避免别名），JSON 双引号需整体转义。
@@ -117,7 +105,7 @@ Windows cmd 下用 `curl.exe`（带 `.exe` 后缀避免别名），JSON 双引�
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
-    model="gemini-3.6-flash",
+    model="gemini-3.5-flash-lite",
     base_url="http://127.0.0.1:3000/v1",
     api_key="sk-…",
 )
@@ -127,12 +115,22 @@ llm = ChatOpenAI(
 
 | 端点 | 方法 | 说明 |
 |---|---|---|
-| `/v1/chat/completions` | POST | 对话补全，支持 `stream: true` |
-| `/v1/models` | GET | 可用模型列表 |
+| `/v1/chat/completions` | POST | Flash-Lite 已通过普通和 SSE 问答；其他来源须单独验收 |
+| `/v1/responses` | POST | Flash-Lite 已通过 Codex CLI 0.157.1 真实回答及 SSE；其他来源不能套用此结论 |
+| `/v1/models` | GET | 可用模型列表，不代表问答成功 |
 | `/v1/embeddings` | 取决于渠道 | 当前上游不支持，勿接入 |
+
+| 来源 | OpenAI 聊天接口 | Codex Responses 状态 |
+|---|---|---|
+| Gemini Flash-Lite | 网关 `/v1/chat/completions`，当前开放 | 网关 `/v1/responses`，已用 CLI 验证 |
+| Gemini Flash | 近期返回错误致歉，已禁用 | 不可用，复验后再配置 |
+| 4 Argon 实验 | 新账号通过网关普通及 SSE 问答，实际模型 `4 Argon`，现已开放 | 网关 `/v1/responses` 普通及 SSE 正确回答；Codex CLI 0.157.1 基本文本任务实测通过，可将模板 `model` 改为 `gemini-4-argon`；复杂工具调用未验收 |
+| 学习通课程 AI | 适配器有聊天接口，浏览器等待本人完成课程登录；网关渠道禁用 | 尚无真实问答，不开放 Codex；适配器的 SSE 是完整答案后输出 |
+| ChatGPT Web | 网关 `chatgpt-web-gpt-5-5` → 网页 `gpt-5-5`，已通过普通及 SSE 问答 | 当前源站未实现 `/v1/responses`：网关返回 404，**不能接 Codex CLI**。需要另行实现 Responses 与工具调用适配并实测，不要与 Codex 官方账号登录混淆 |
+| Grok Web | 本机账号未配置，无网关渠道 | 无法验收，不开放 Codex |
 
 ## 8. 已知行为边界
 
 - 上游对带 `tools` 的请求是"缓冲后整发"，不是逐 token 流式
 - 匿名模式下无 `reasoning_content`；配置 Cookie 后 `-thinking` 模型才返回思维链
-- 上游限流：每 IP 并发 5 / RPM 30 / RPH 80，429 属上游节流，退避重试即可
+- 实验 Argon 上游配置了每出口并发 5 / RPM 30 / RPH 80；但该构建也可能在账号或出口不可用时以 `ip_slot_full` 返回 429。先检查账号状态和管理端 `/admin/api/usage`，不能假设等待/盲目重试必然解决。
