@@ -8,7 +8,7 @@
     "models": "chaoxing-course-ai",
     "group": "default",
     "model_mapping": "",
-    "remark": "需本人恢复学习通登录并完成真实问答，验证前保持禁用"
+    "remark": "学习通按用户要求暂停；若以后恢复，先完成真实问答再启用"
   },
   {
     "type": 1,
@@ -20,5 +20,16 @@
     "group": "default",
     "model_mapping": "{\"chatgpt-web-active\":\"auto\"}",
     "remark": "需真实 ChatGPT Web 问答验证通过，验证前保持禁用"
+  },
+  {
+    "type": 1,
+    "name": "grok-web-isolated",
+    "status": 2,
+    "key": "<本机 grok2api 管理端生成的仅 Grok Web 客户端密钥>",
+    "base_url": "http://127.0.0.1:18084",
+    "models": "grok-web-fast",
+    "group": "default",
+    "model_mapping": "{\"grok-web-fast\":\"grok-chat-fast\"}",
+    "remark": "仅本机同出口 Web 账号真实问答通过后启用，不能把 Grok Build/Console 误作 Grok Web"
   }
 ]
