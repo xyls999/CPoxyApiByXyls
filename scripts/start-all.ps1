@@ -60,6 +60,30 @@ if (-not (Test-Port 8083)) {
     Write-Host "[SKIP] upstream already on :8083"
 }
 
+# An unmerged Argon build is strictly opt-in and stays on loopback. Never
+# attach new-api to an unrelated process that happens to occupy this port.
+$trialDir = Join-Path (Split-Path -Parent $PSScriptRoot) '.runtime\argon-trial'
+if (Test-Path (Join-Path $trialDir 'auto-start.enabled')) {
+    $trialExe = Join-Path $trialDir 'bin\argon-pr37.exe'
+    $trialConfig = Join-Path $trialDir 'trial-config.json'
+    $trialDB = Join-Path $trialDir 'trial.db'
+    foreach ($path in @($trialExe, $trialConfig, $trialDB)) {
+        if (-not (Test-Path $path)) { throw "Experimental Argon component missing: $path" }
+    }
+    if (-not (Test-Port 18083)) {
+        Start-Process -FilePath $trialExe -WorkingDirectory $trialDir `
+            -ArgumentList @('--config', $trialConfig, '--db', $trialDB, '--port', '18083') `
+            -RedirectStandardOutput (Join-Path $trialDir 'trial.stdout.log') `
+            -RedirectStandardError (Join-Path $trialDir 'trial.stderr.log') -WindowStyle Hidden
+    }
+    Wait-Port 18083 'Argon experimental'
+    $listener = @(Get-NetTCPConnection -LocalPort 18083 -State Listen -ErrorAction Stop |
+        Where-Object { $_.LocalAddress -eq '127.0.0.1' })
+    if ($listener.Count -ne 1) { throw 'Argon experimental service is not exclusively bound to loopback' }
+    $owner = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId=$($listener[0].OwningProcess)"
+    if ($owner.ExecutablePath -ne $trialExe) { throw 'Argon experimental port is owned by an unknown process' }
+}
+
 if (-not (Test-Port 3000)) {
     Write-Host "starting gateway: $gatewayExe"
     Start-Process -FilePath $gatewayExe -WorkingDirectory $NewApiDir `
@@ -78,3 +102,6 @@ Write-Host "all services up:"
 Write-Host "  coding api : http://127.0.0.1:3000/v1"
 Write-Host "  admin ui   : http://127.0.0.1:3000"
 Write-Host "  upstream   : http://127.0.0.1:8083"
+if (Test-Path (Join-Path $trialDir 'auto-start.enabled')) {
+    Write-Host "  Argon trial: http://127.0.0.1:18083 (experimental, admin not exposed to LAN)"
+}
