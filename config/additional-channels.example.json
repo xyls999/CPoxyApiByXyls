@@ -16,9 +16,9 @@
     "status": 2,
     "key": "<ChatGPT-Web2API 独立服务访问密钥>",
     "base_url": "http://127.0.0.1:18080",
-    "models": "chatgpt-web-auto",
+    "models": "chatgpt-web-active",
     "group": "default",
-    "model_mapping": "{\"chatgpt-web-auto\":\"auto\"}",
+    "model_mapping": "{\"chatgpt-web-active\":\"auto\"}",
     "remark": "需真实 ChatGPT Web 问答验证通过，验证前保持禁用"
   }
 ]

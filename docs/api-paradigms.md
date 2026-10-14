@@ -126,7 +126,7 @@ llm = ChatOpenAI(
 | Gemini Flash | 近期返回错误致歉，已禁用 | 不可用，复验后再配置 |
 | 4 Argon 实验 | 新账号通过网关普通及 SSE 问答，实际模型 `4 Argon`，现已开放 | 网关 `/v1/responses` 普通及 SSE 正确回答；Codex CLI 0.157.1 基本文本任务实测通过，可将模板 `model` 改为 `gemini-4-argon`；复杂工具调用未验收 |
 | 学习通课程 AI | 适配器有聊天接口，浏览器等待本人完成课程登录；网关渠道禁用 | 尚无真实问答，不开放 Codex；适配器的 SSE 是完整答案后输出 |
-| ChatGPT Web | 网关 `chatgpt-web-gpt-5-5` → 网页 `gpt-5-5`，已通过普通及 SSE 问答 | 当前源站未实现 `/v1/responses`：网关返回 404，**不能接 Codex CLI**。需要另行实现 Responses 与工具调用适配并实测，不要与 Codex 官方账号登录混淆 |
+| ChatGPT Web | 网关 `chatgpt-web-active` → 网页 `auto`（当前模型可变，本次后端曾显示 `gpt-6-thinking`），普通及 SSE 正确回答；显式选模失败返回 422，避免将当前模型冒充指定版本 | 当前源站未实现 `/v1/responses`：网关返回 404，**不能接 Codex CLI**。需要另行实现 Responses 与工具调用适配并实测，不要与 Codex 官方账号登录混淆 |
 | Grok Web | 本机账号未配置，无网关渠道 | 无法验收，不开放 Codex |
 
 ## 8. 已知行为边界
