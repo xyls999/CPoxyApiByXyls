@@ -49,7 +49,7 @@
 | 学习通课程 AI | `127.0.0.1:8787` → 协议适配 `127.0.0.1:8788` | `chaoxing-course-ai`，模型 `chaoxing-course-ai` | 本人正常登录课程、机器人就绪、真实问答成功后才启用 |
 | ChatGPT Web | ChatGPT-Web2API `127.0.0.1:18080` | `chatgpt-web-browser`，模型 `chatgpt-web-auto` 映射 `auto` | 独立浏览器已登录且真实问答成功后才启用；不要复用 Codex Full 模式 |
 
-当前实例的首页使用 [config/home-page.md](config/home-page.md) 作为 `HomePageContent`，展示各来源的**人工验收快照**（不是持续在线监测），可在管理台系统设置中更新。未通过真实问答验收的来源须保留**禁用状态**。本机现已用官方校验和验证的 Gemini v4.21.0，通过 new-api 完成 `gemini-3.5-flash-lite` 的普通和 SSE 问答（均回答 OK）；`gemini-3.6-flash` 也已通过 new-api 真实问答。Gemini 与隔离的 Argon 实验渠道启用，学习通和 ChatGPT Web 仍禁用。仅监听、健康检查或模型列表返回 200 都不等于问答成功。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
+当前实例的首页使用 [config/home-page.html](config/home-page.html) 作为 `HomePageContent`，保留 [Markdown 回退文案](config/home-page.md)。页面展示各来源的**人工验收快照**（不是持续在线监测），并使用 new-api 原有登录、注册与令牌系统；可在管理台系统设置中更新。未通过真实问答验收的来源须保留**禁用状态**。本机现已用官方校验和验证的 Gemini v4.21.0，通过 new-api 完成 `gemini-3.5-flash-lite` 的普通和 SSE 问答（均回答 OK）；`gemini-3.6-flash` 也已通过 new-api 真实问答。Gemini 与隔离的 Argon 实验渠道启用，学习通和 ChatGPT Web 仍禁用。仅监听、健康检查或模型列表返回 200 都不等于问答成功。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
 
 在 `E:\cpa\new-api` 这一已有配置的网关实例中启动时要显式指定目录，避免切换到 `bin\new-api` 里未初始化的另一份数据库：
 
@@ -140,7 +140,7 @@ $env:CODING_API_KEY = "sk-你的网关令牌"
 | API Key | new-api 管理台发放的 `sk-…` 令牌 |
 | Model | `gemini-3.5-flash-lite` / `gemini-3.6-flash` / `gemini-4-argon`（最后一个为实验渠道） |
 
-当前仅开放真实 Gemini 名称。配置模板中原有的 `gpt-*` 别名并非 GPT 模型，且尚未验证，已从当前实例的模型列表隐藏。新注册账号默认赠送 $1,000,000 额度（这是本机配置，不代表实际付费余额）。
+当前仅开放真实 Gemini 名称。配置模板中原有的 `gpt-*` 别名并非 GPT 模型，且尚未验证，已从当前实例的模型列表隐藏。新注册账号默认赠送 **10 亿基准 token 等值**内部额度：按本项目基准价 $0.002/千 token、500000 quota/USD 折算为 `QuotaForNewUser=1000000000000`（显示为 $2,000,000 站内额度，非真实现金）。不同模型和输入/输出单价会改变实际可用 token 数，**不是跨模型固定 10 亿 token 硬上限**；该站内积分仅供本机可信内网测试，公开运营前须补 HTTPS 和防批量注册。
 
 **Codex CLI 专用**：把 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 复制为
 `%USERPROFILE%\.codex\cpoxy.config.toml`，替换其中的 `<GATEWAY-HOST>` 和 `<GATEWAY-TOKEN>`

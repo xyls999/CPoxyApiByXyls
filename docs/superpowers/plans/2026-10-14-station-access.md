@@ -41,6 +41,17 @@
 - [ ] **Step 3:** 运行结构测试转绿；检查 new-api 源码 `HtmlContent` 净化允许 `<style>` 而屏蔽 `<script>`，将新 HTML 写入正式数据库 `HomePageContent` 并重启网关。
 - [ ] **Step 4:** 用浏览器验证桌面/移动排版与登录、注册 CTA，检查根页及 `/api/home_page_content` HTTP 200；运行原有 Node 适配器测试和 `git diff --check`。
 
+### Task 2b: 登录/注册外壳视觉优化
+
+**Files:** `E:/cpa/new-api/web/src/features/auth/auth-layout.tsx` 与相邻组件测试；从隔离的 new-api worktree 构建，不覆盖源仓库未跟踪文件。
+
+**Interfaces:** 保留 `AuthLayout` 的 `children`、`systemName`、`logo` 与所有认证表单、登录 API 的现有行为。
+
+- [ ] **Step 1:** 在独立 worktree 安装锁定前端依赖，验证基线测试；为原有系统标识、双栏布局、狭窄视口表单与原有 children 增加失败的组件测试。
+- [ ] **Step 2:** 修改通用 AuthLayout 样式与品牌旁栏；登录、注册复用相同布局，适配深色模式，不新增登录接口或凭据存储。
+- [ ] **Step 3:** 运行测试、`bun run typecheck`、`bun run build:check`；使用数据库副本和独立监听验收构建后的 Go 网关，并与现有数据库结构对比。
+- [ ] **Step 4:** 如安全可部署，备份现有二进制后切换并用浏览器验证 `/sign-in`、`/sign-up`，否则保留现有二进制并报告阻碍。
+
 ### Task 3: 学习通真实验收（外部登录门控）
 
 **Files:** `scripts/check-sources.ps1` 的运行输出与学习通 `.runtime` 服务状态；失败前不改启用状态。
