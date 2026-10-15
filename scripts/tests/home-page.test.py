@@ -40,6 +40,7 @@ def test_landing_page():
     assert '4 Argon' in content
     assert 'chatgpt-web-active' in content
     assert 'grok-web-fast' in content and 'Web/grok-chat-fast' in content
+    assert 'Grok Web' in content and '当前 SSE 暂不可用' in content and 'Agent 工具调用未开放' in content
     assert 'chatgpt-web-gpt-5-5' not in content
     assert 'Flash 模型经网关真实回答' not in content
     assert 'style' in parsed.tags and '@media' in html

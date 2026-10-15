@@ -1,0 +1,174 @@
+diff --git a/backend/internal/infra/provider/web/chat.go b/backend/internal/infra/provider/web/chat.go
+index 3eb32a0..d0fc9ae 100644
+--- a/backend/internal/infra/provider/web/chat.go
++++ b/backend/internal/infra/provider/web/chat.go
+@@ -542,6 +542,9 @@ func (a *Adapter) streamOpenAIResponse(ctx context.Context, source io.ReadCloser
+ 			}
+ 			if kind == "text" && sieve != nil {
+ 				result := sieve.Feed(delta)
++				if result.Err != nil {
++					return result.Err
++				}
+ 				if result.SafeText != "" {
+ 					clientText.WriteString(result.SafeText)
+ 					if err := writeDelta(kind, result.SafeText); err != nil {
+@@ -557,7 +560,16 @@ func (a *Adapter) streamOpenAIResponse(ctx context.Context, source io.ReadCloser
+ 						return flushSideChannel()
+ 					}
+ 					parsed.ToolCalls = result.Calls
+-					return writeToolCalls(result.Calls)
++					if err := writeToolCalls(result.Calls); err != nil {
++						return err
++					}
++					if result.TrailingText != "" {
++						clientText.WriteString(result.TrailingText)
++						if err := writeDelta(kind, result.TrailingText); err != nil {
++							return err
++						}
++					}
++					return flushSideChannel()
+ 				}
+ 				return flushSideChannel()
+ 			}
+diff --git a/backend/internal/infra/provider/web/tools.go b/backend/internal/infra/provider/web/tools.go
+index bc5177c..5bb9fe2 100644
+--- a/backend/internal/infra/provider/web/tools.go
++++ b/backend/internal/infra/provider/web/tools.go
+@@ -13,19 +13,21 @@ import (
+ const (
+ 	maxFunctionTools       = 128
+ 	maxToolDescriptionSize = 16 << 10
++	maxCapturedToolXML     = 1 << 20
+ )
+ 
+ var (
+-	toolNamePattern      = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+-	toolSyntaxPattern    = regexp.MustCompile(`(?i)<tool_calls|<tool_call|<function_call|<invoke\s|"tool_calls"\s*:`)
+-	toolCallsRootPattern = regexp.MustCompile(`(?is)<tool_calls\s*>(.*?)</tool_calls\s*>`)
+-	toolCallPattern      = regexp.MustCompile(`(?is)<tool_call\s*>(.*?)</tool_call\s*>`)
+-	toolNameTagPattern   = regexp.MustCompile(`(?is)<tool_name\s*>(.*?)</tool_name\s*>`)
+-	toolParamsTagPattern = regexp.MustCompile(`(?is)<parameters\s*>(.*?)</parameters\s*>`)
+-	functionCallPattern  = regexp.MustCompile(`(?is)<function_call\s*>(.*?)</function_call\s*>`)
+-	functionNamePattern  = regexp.MustCompile(`(?is)<name\s*>(.*?)</name\s*>`)
+-	functionArgsPattern  = regexp.MustCompile(`(?is)<arguments\s*>(.*?)</arguments\s*>`)
+-	invokePattern        = regexp.MustCompile(`(?is)<invoke\s+name=["']?([A-Za-z0-9_-]+)["']?\s*>(.*?)</invoke\s*>`)
++	toolNamePattern           = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
++	toolSyntaxPattern         = regexp.MustCompile(`(?i)<tool_calls|<tool_call|<function_call|<invoke\s|"tool_calls"\s*:`)
++	toolCallsRootPattern      = regexp.MustCompile(`(?is)<tool_calls\s*>(.*?)</tool_calls\s*>`)
++	toolCallPattern           = regexp.MustCompile(`(?is)<tool_call\s*>(.*?)</tool_call\s*>`)
++	toolNameTagPattern        = regexp.MustCompile(`(?is)<tool_name\s*>(.*?)</tool_name\s*>`)
++	toolParamsTagPattern      = regexp.MustCompile(`(?is)<parameters\s*>(.*?)</parameters\s*>`)
++	functionCallPattern       = regexp.MustCompile(`(?is)<function_call\s*>(.*?)</function_call\s*>`)
++	functionNamePattern       = regexp.MustCompile(`(?is)<name\s*>(.*?)</name\s*>`)
++	functionArgsPattern       = regexp.MustCompile(`(?is)<arguments\s*>(.*?)</arguments\s*>`)
++	invokePattern             = regexp.MustCompile(`(?is)<invoke\s+name=["']?([A-Za-z0-9_-]+)["']?\s*>(.*?)</invoke\s*>`)
++	errToolStreamCaptureLimit = errors.New("streamed tool XML exceeds size limit")
+ )
+ 
+ type functionTool struct {
+@@ -58,10 +60,12 @@ type toolParseResult struct {
+ }
+ 
+ type toolStreamResult struct {
+-	SafeText string
+-	Calls    []parsedToolCall
+-	Complete bool
+-	Raw      string
++	SafeText     string
++	TrailingText string
++	Err          error
++	Calls        []parsedToolCall
++	Complete     bool
++	Raw          string
+ }
+ 
+ type toolStreamSieve struct {
+@@ -414,9 +418,21 @@ func (s *toolStreamSieve) Feed(chunk string) toolStreamResult {
+ 		s.capturing = true
+ 		s.buffer = combined[index:]
+ 		combined = combined[:index]
++	} else {
++		// Retain captured XML without exposing it as safe text.
++		s.buffer = combined
++		combined = ""
+ 	}
+ 	lower := strings.ToLower(s.buffer)
+ 	endIndex := strings.Index(lower, "</tool_calls>")
++	if (endIndex < 0 && len(s.buffer) > maxCapturedToolXML) ||
++		(endIndex >= 0 && endIndex+len("</tool_calls>") > maxCapturedToolXML) {
++		// A malformed or oversized tool call must fail closed, not leak XML to text.
++		s.buffer = ""
++		s.capturing = false
++		s.done = true
++		return toolStreamResult{Err: errToolStreamCaptureLimit}
++	}
+ 	if endIndex < 0 {
+ 		return toolStreamResult{SafeText: combined}
+ 	}
+@@ -429,8 +445,9 @@ func (s *toolStreamSieve) Feed(chunk string) toolStreamResult {
+ 	s.done = len(parsed.Calls) > 0
+ 	if len(parsed.Calls) == 0 {
+ 		raw += remainder
++		return toolStreamResult{SafeText: combined, Complete: true, Raw: raw}
+ 	}
+-	return toolStreamResult{SafeText: combined, Calls: parsed.Calls, Complete: true, Raw: raw}
++	return toolStreamResult{SafeText: combined, TrailingText: remainder, Calls: parsed.Calls, Complete: true, Raw: raw}
+ }
+ 
+ func (s *toolStreamSieve) Flush() toolStreamResult {
+diff --git a/backend/internal/infra/provider/web/tools_test.go b/backend/internal/infra/provider/web/tools_test.go
+index 45e24e6..6248699 100644
+--- a/backend/internal/infra/provider/web/tools_test.go
++++ b/backend/internal/infra/provider/web/tools_test.go
+@@ -420,6 +420,51 @@ func TestToolStreamSieveHandlesSplitXML(t *testing.T) {
+ 	}
+ }
+ 
++func TestToolStreamSieveBuffersToolCallAcrossSeveralDeltas(t *testing.T) {
++	const xml = `<tool_calls><tool_call><tool_name>exec_command</tool_name><parameters>{"cmd":"Get-Content proof.txt"}</parameters></tool_call></tool_calls>`
++	for _, chunkSize := range []int{1, 7, 23} {
++		sieve := newToolStreamSieve(map[string]struct{}{"exec_command": {}})
++		var visible strings.Builder
++		var calls []parsedToolCall
++		for start := 0; start < len(xml); start += chunkSize {
++			end := min(start+chunkSize, len(xml))
++			result := sieve.Feed(xml[start:end])
++			visible.WriteString(result.SafeText)
++			calls = append(calls, result.Calls...)
++		}
++		last := sieve.Flush()
++		visible.WriteString(last.SafeText)
++		calls = append(calls, last.Calls...)
++		if len(calls) != 1 || calls[0].Name != "exec_command" || calls[0].Arguments != `{"cmd":"Get-Content proof.txt"}` || visible.Len() != 0 {
++			t.Fatalf("chunk size %d: calls=%d visible XML=%t", chunkSize, len(calls), strings.Contains(visible.String(), "<tool_calls"))
++		}
++	}
++}
++
++func TestToolStreamSievePreservesTextAroundSplitCall(t *testing.T) {
++	sieve := newToolStreamSieve(map[string]struct{}{"lookup": {}})
++	first := sieve.Feed("before <tool_ca")
++	second := sieve.Feed(`lls><tool_call><tool_name>lookup</tool_name><parameters>{"q":"x"}</parameters></tool_call></tool_calls> after`)
++	if first.SafeText != "before " || len(second.Calls) != 1 || second.SafeText != "" || second.TrailingText != " after" {
++		t.Fatalf("split tool call should preserve ordered safe text on either side: first=%q calls=%d leading=%q trailing=%q", first.SafeText, len(second.Calls), second.SafeText, second.TrailingText)
++	}
++}
++
++func TestToolStreamSieveFailsClosedOnOversizedUnterminatedXML(t *testing.T) {
++	sieve := newToolStreamSieve(map[string]struct{}{"lookup": {}})
++	first := sieve.Feed("before <tool_calls>")
++	if first.SafeText != "before " {
++		t.Fatalf("prefix = %q", first.SafeText)
++	}
++	second := sieve.Feed(strings.Repeat("x", 1<<20))
++	if second.Err != errToolStreamCaptureLimit || len(sieve.buffer) > 1<<20 || second.SafeText != "" || !sieve.done {
++		t.Fatalf("oversized tool XML was not rejected without leaking: err=%v buffered=%d safe=%d done=%t", second.Err, len(sieve.buffer), len(second.SafeText), sieve.done)
++	}
++	if flushed := sieve.Flush(); flushed.SafeText != "" {
++		t.Fatalf("oversized XML escaped during flush: length=%d", len(flushed.SafeText))
++	}
++}
++
+ func TestToolStreamSievePreservesInvalidSyntaxAndTrailingText(t *testing.T) {
+ 	sieve := newToolStreamSieve(map[string]struct{}{"lookup": {}})
+ 	result := sieve.Feed(`<tool_calls><tool_call><tool_name>unknown</tool_name><parameters>{}</parameters></tool_call></tool_calls> trailing`)

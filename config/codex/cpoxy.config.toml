@@ -6,3 +6,5 @@ name = "CPoxy"
 base_url = "http://<GATEWAY-HOST>:3000/v1"
 wire_api = "responses"
 env_key = "CPOXY_API_KEY"
+
+# Optional Gemini 4 profile: copy config/codex/gemini4.config.toml beside this file.

@@ -1,0 +1,12 @@
+model = "gemini-4-argon"
+model_provider = "cpoxy"
+model_reasoning_effort = "high"
+
+[features]
+multi_agent = false
+
+[model_providers.cpoxy]
+name = "CPoxy"
+base_url = "http://127.0.0.1:3000/v1"
+wire_api = "responses"
+env_key = "CPOXY_API_KEY"

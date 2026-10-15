@@ -1,6 +1,6 @@
 # grok2api（siinclair/grok2api）接入可行性，2026-10-14
 
-> 本轮复验更新：用户在独立 Edge 登录 Grok 后，已将 SSO 与 Cloudflare 登录态仅在本机导入隔离服务，并为 Grok Web 账号绑定与浏览器一致的回环代理出口。首次未配出口的真实问答为 `502 upstream_timeout`，**没有重发该问题**；修正后隔离上游普通/SSE 与正式网关普通/SSE 均以不同新题返回正确答案。最近审计的四条成功记录均标识 `grok_web` / `Web/grok-chat-fast` / HTTP 200。现在仅开放 `grok-web-fast` 文本聊天及已验收的简单 Responses 文本请求；网关 `/v1/responses` 普通/SSE 均通过，但 Codex CLI 的工具参数被 Web 上游以 400 拒绝，**不宣称 Codex CLI 可用**。重启 Grok 隔离服务后账号、代理、客户端 Key 均持久保留，本网关又以新题获得正确答案。`/readyz` 为 HTTP 200 但 Web 组件为 `degraded`，不等同持续稳定或 SLA。
+> 本轮复验更新：用户在独立 Edge 登录 Grok 后，已将 SSO 与 Cloudflare 登录态仅在本机导入隔离服务，并为 Grok Web 账号绑定与浏览器一致的回环代理出口。首次未配出口的真实问答为 `502 upstream_timeout`，**没有重发该问题**；修正后隔离上游普通/SSE 与正式网关普通/SSE 均以不同新题返回正确答案。审计确认来源 `grok_web` / `Web/grok-chat-fast`。现已开放 `grok-web-fast` 文本聊天；隔离上游补丁修复了分片 XML 工具调用缓存错误，第一版补丁经正式网关的 Chat Completions 流式函数调用 → 本地工具结果 → 正确续答已实测，但复审后构建的工具往返遭遇上游瞬断/未选工具，尚未再次通过。Responses 的工具结果续答及 Codex CLI 的真实工具执行**仍未验收**（分别出现 XML 泄露、Windows 沙箱拒绝）。进程重启后账号、代理、客户端 Key 均持久保留；`/readyz` 为 HTTP 200 但 Web 组件为 `degraded`，不等同持续稳定或 SLA。
 
 ## 结论
 
@@ -15,6 +15,16 @@ Grok Web 适配代码默认请求 `https://grok.com`，其私有实时网关使�
 - **初次调研时**无 Grok Web SSO 会话、无真实回答、未接入网关；上述情况已由本轮复验改变。健康检查、能编译和 mock 测试仍不能替代上游回答。Web 认证可能因 SSO 过期、Cloudflare Clearance/出口 IP/浏览器指纹不一致而失败。[README 出口与 Cloudflare](https://github.com/siinclair/grok2api/blob/7c889a960e2638341b4dae9a5c81af0e0f38c87f/README.zh-CN.md#出口与-cloudflare)、[上游反机器人报错](https://github.com/siinclair/grok2api/blob/7c889a960e2638341b4dae9a5c81af0e0f38c87f/backend/internal/infra/provider/web/chat.go)。
 - 当前 Windows 主机没有 Docker 命令；原项目提供[源码运行](https://github.com/siinclair/grok2api/blob/7c889a960e2638341b4dae9a5c81af0e0f38c87f/README.zh-CN.md#源码运行)。已经用 `pnpm install --frozen-lockfile && pnpm build` 构建管理前端、用 Go 1.26.9 编译后端；构建放在 Git 忽略的私有 `.runtime/research/`。
 - 已使用私有配置启动 `127.0.0.1:18084`：`GET /healthz`、管理 UI 返回 200；本机管理员登录成功且未输出凭据。初次调研 `/readyz` 为 503、Web/Console 无账号。现在 Web 有一条本机账号及独立客户端 Key，`/readyz` HTTP 200 但 Web 为 `degraded`，Console 仍无账号；网关 id 5 仅接入 `grok-web-fast`，服务仅监听回环。**管理 UI 和 `/readyz` 仍不能替代已单独通过的真实回答。**
+
+## Grok 工具调用补丁与验收范围
+
+第三方源码固定于本机 `E:\cpa\CPoxyApiByXyls\.runtime\research\grok2api` 的原提交 `7c889a960e2638341b4dae9a5c81af0e0f38c87f`；本仓库保存可复现的本地补丁 [`patches/grok2api-web-stream-tools.patch`](../../patches/grok2api-web-stream-tools.patch)。在**干净的对应上游提交**执行 `git apply <本仓库补丁路径>`，然后在 `backend/` 执行 `go test -count=1 ./internal/infra/provider/web` 和 `go build -o <本机私有目录>/grok2api-trial.exe ./cmd/grok2api`。不要将配置、账号库、日志或浏览器资料带入补丁或版本库。该补丁候选二进制已在本机编译，但因最终构建的 SSE 新题复验出现 `upstream_stream_interrupted`，当前隔离服务已回滚到 `.runtime/research/grok2api-trial-pre-tool-sieve.exe`；服务仅监听 `127.0.0.1:18084`。候选及回滚文件均留在私有 `.runtime/research/`，不提交版本库。
+
+- **TDD 复现**：原 `toolStreamSieve.Feed` 只缓存打开 `<tool_calls>` 的第一个分片，后续分片丢弃先前 XML，还把内部标记泄露为安全文本。新增测试按 1、7、23 字节切片，原代码 `calls=0, leaked=true`；补丁后每种分片恰好 1 个已声明的 `exec_command`，无 XML 泄露。复审进一步发现有效调用后的普通文本会丢失、未闭合 XML 可无界累积；另两条先红后绿的测试现覆盖调用前后文本和超过 1 MiB 的失败关闭。Web Provider 包测试通过。
+- `go test -count=1 ./...` 在**未修改的** `internal/infra/egress` 包 `TestPinnedHTTPSClientSOCKS5HReceivesPinnedIP` 失败：Windows `wsarecv` 提示连接被本机软件中止；单独复现亦失败。故**不能称全量 Go 测试通过**，相关 stdout/stderr 仅留本机私有 `.runtime/research/grok2api-go-full-tests.*.log`。
+- 正式网关 `/v1/chat/completions` 的真实流式首轮返回 `get_local_token` 函数调用；将上游未知的本机随机值按同一 `tool_call_id` 的 `role=tool` 放入完整消息历史，第二轮非流式准确回答该值，且没有额外工具调用或 XML 泄露（第一版分片修复构建）。具体调用形状见 [Coding API 调用范式](../api-paradigms.md#grok-web-agent实际验收的函数工具往返)。复审后的最终构建专项测试通过且不同的普通非流式新题正确回答，但两道**不同的新工具流式题**在约一秒出现 `upstream_stream_interrupted`，另一道非流式 `tool_choice=required` 新题返回普通文本、未给出工具调用；均未重发原题。故最终构建的 agent 往返**尚未再次实测通过**，不能把第一版的单次成功推广为当前持续可靠的承诺，调用方必须检查工具事件并失败关闭。
+- Responses 的简单文本及首次 SSE `function_call` 通过；但一次用 `previous_response_id` + `function_call_output` 续答未采用随机工具结果，反而把函数调用 XML 作为文本输出，**不能把该路径当作已验收 agent 接口**。
+- Codex CLI 0.157.1 默认附带 `multi_agent_v1` 的 `namespace`，Grok Web 返回 400 `invalid_tools`；独立私有配置 `features.multi_agent=false` 移除了 namespace。补丁前模型给出的工具 XML 原样泄露；补丁后成功发出 `exec_command` 并收到工具反馈，但 Windows `read-only` 沙箱拒绝启动 PowerShell，未读到文件。另一轮 `workspace-write` 试验则未自动选择工具。**不修改用户默认 Codex 配置，也不推荐 `danger-full-access` 绕过沙箱；Codex CLI 仍不可标为可用。**
 
 ## 本机启动与登录
 

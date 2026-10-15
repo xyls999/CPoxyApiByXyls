@@ -48,9 +48,11 @@
 | 4 Argon（实验） | `127.0.0.1:18083` | `gemini-4-argon-experimental`，当前开放 | [上游 PR #37](https://github.com/zexadev/gemini-web2api-go/pull/37) 隔离构建；重新登录后经网关普通/SSE 问答通过，实际上游为 4 Argon；仍可能随时失效 |
 | 学习通课程 AI | `127.0.0.1:8787` → 协议适配 `127.0.0.1:8788` | `chaoxing-course-ai`，模型 `chaoxing-course-ai` | 按用户要求停止服务、保持渠道禁用 |
 | ChatGPT Web | ChatGPT-Web2API `127.0.0.1:18080` | `chatgpt-web-browser`，模型 `chatgpt-web-active` 映射 `auto` | 网页当前模型动态变化（本次后端曾显示 `gpt-6-thinking`）；修复 DOM 漏检后经网关普通/SSE 问答通过，显式选模失败会拒绝发送；不等于 Codex 官方 API |
-| Grok Web（实验） | grok2api `127.0.0.1:18084` | `grok-web-isolated`，`grok-web-fast` 映射 `grok-chat-fast` | 本机 SSO 与同出口代理就绪；隔离上游及网关普通/SSE 真实问答通过，审计显示 `Web/grok-chat-fast`；网页登录态/额度/出口变化可能使服务失效 |
+| Grok Web（实验） | grok2api `127.0.0.1:18084` | `grok-web-isolated`，`grok-web-fast` 映射 `grok-chat-fast` | 本机 SSO 与同出口代理就绪；普通/SSE 问答已通过；Chat Completions 工具往返第一版补丁单次通过，最终构建复验遇上游瞬断/未选工具，审计显示 `Web/grok-chat-fast`；网页登录态/额度/出口变化可能使服务失效 |
 
 当前实例的首页使用 [config/home-page.html](config/home-page.html) 作为 `HomePageContent`，保留 [Markdown 回退文案](config/home-page.md)。页面展示各来源的**人工验收快照**（不是持续在线监测），并使用 new-api 原有登录、注册与令牌系统；可在管理台系统设置中更新。未通过真实问答验收的来源须保留**禁用状态**。本机现已用官方校验和验证的 Gemini v4.21.0，通过 new-api 完成 `gemini-3.5-flash-lite` 的普通和 SSE 问答（均回答 OK）；`gemini-3.6-flash` 曾通过真实问答，但近次返回错误致歉，现已禁用；Argon 换用本机新会话后经本网关普通及 SSE 问答复验通过并开放；ChatGPT Web 修复回答漏检并通过同样验收后开放；Grok Web 经本机网页登录及同出口代理接入后，隔离服务与网关的普通/SSE 真实问答通过并开放；学习通按用户要求停止服务且仍禁用。仅监听、健康检查或模型列表返回 200 都不等于问答成功。学习通适配器只支持文本聊天：每次请求建立并释放一个独立上游会话；多轮 `messages` 会合并为有角色标记的文本，而不是原生学习通会话续聊。它等待完整答案后才输出 SSE，并非真实逐 token 流式输出。仅监听回环地址，密钥保存在被 Git 忽略的 `.runtime/chaoxing-keys.json`，禁止上传 `.runtime/`、日志、浏览器资料目录或真实调用凭据。
+
+桌面快捷方式 **CPoxy 快速启动** 会启动 Gemini、Argon、ChatGPT Web、Grok Web 和 new-api，学习通保持停止。它还会打开专用 Gemini Edge（本机 CDP `19447`），检测到 Google 登录态后自动将 Gemini 域 Cookie 导入 Argon Cookie 池。Cookie 只在本机处理，不写入聊天、Git 或普通日志。内网首页为 `http://10.113.5.51:3000/`，API 为 `http://10.113.5.51:3000/v1`。
 
 在 `E:\cpa\new-api` 这一已有配置的网关实例中启动时要显式指定目录，避免切换到 `bin\new-api` 里未初始化的另一份数据库：
 
@@ -60,7 +62,7 @@
 
 实验渠道的源码、编译器、配置和账号库保存在被 Git 忽略且仅本机用户可访问的 `.runtime/argon-trial/`；`auto-start.enabled` 标记存在时 `start-all.ps1` 会先验证/启动本机 `18083`，再启动网关。该二进制是**未合并 PR 的实验构建**，不是官方正式发行版；若缺少本机私有文件，启动会拒绝将未知服务冒充实验上游。不要上传 `.runtime/` 或公开浏览器登录态。
 
-Grok Web 仍是独立实验服务：私有源码、可执行文件、配置、加密账号库与本地浏览器资料位于 `.runtime/research/`、`.runtime/grok-trial/`，服务仅监听 `127.0.0.1:18084`。它需要与网页登录相同的 `127.0.0.1:7897` 出口；网关重启前须先确保 Grok 服务按 [研究记录](docs/research/grok2api-evaluation.md#本机启动与登录) 启动。当前 Grok 客户端 Key 限制为共用 2 RPM / 1 并发；限流或登录态失效时不要盲目重复发送可能已到达上游的问题。不要上传 `.runtime/` 或公开浏览器登录态。
+Grok Web 仍是独立实验服务：私有源码、可执行文件、配置、加密账号库与本地浏览器资料位于 `.runtime/research/`、`.runtime/grok-trial/`，服务仅监听 `127.0.0.1:18084`。已为分片函数调用解析缺陷保存[可复现补丁](patches/grok2api-web-stream-tools.patch)，第一版补丁曾经正式网关完成一次 Chat Completions 的真实函数工具往返，但最终复审构建尚未再次通过；**Codex CLI 和 Responses 工具结果续答也尚未通过**，不能据此宣称它们可用。Grok 需要与网页登录相同的 `127.0.0.1:7897` 出口；网关重启前须先确保 Grok 服务按 [研究记录](docs/research/grok2api-evaluation.md#本机启动与登录) 启动。当前 Grok 客户端 Key 限制为共用 2 RPM / 1 并发；限流或登录态失效时不要盲目重复发送可能已到达上游的问题。不要上传 `.runtime/` 或公开浏览器登录态。
 
 `-GeminiProxy` 仅在**启动** Gemini 服务时生效；服务已在 8083 监听时脚本不会更改代理。`start-chaoxing.ps1` 启动时对 `.runtime/` 限制文件访问权限；关闭时使用 `stop-chaoxing.ps1`，会先让适配器拒绝新请求、等待活跃请求清理完成，超时则拒绝强制停止。Gemini 上游不读取 `HTTPS_PROXY` 环境变量，可用 `-GeminiProxy` 显式设置；若无需代理则省略该选项。渠道模板见 `config/additional-channels.example.json`，接入前请在管理台用实际密钥替换占位符，并保持 `status=2`，直到端到端问答验收成功。
 
@@ -145,7 +147,7 @@ $env:CODING_API_KEY = "sk-你的网关令牌"
 
 只开放已通过网关真实问答的模型标识。配置模板中原有的 `gpt-*` 别名并非 GPT 模型，且尚未验证，已从当前实例的模型列表隐藏。新注册账号默认赠送 **10 亿基准 token 等值**内部额度：按本项目基准价 $0.002/千 token、500000 quota/USD 折算为 `QuotaForNewUser=1000000000000`（显示为 $2,000,000 站内额度，非真实现金）。不同模型和输入/输出单价会改变实际可用 token 数，**不是跨模型固定 10 亿 token 硬上限**；该站内积分仅供本机可信内网测试，公开运营前须补 HTTPS 和防批量注册。
 
-**Codex CLI 专用**：将 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 合并到 `%USERPROFILE%\.codex\config.toml`，替换 `<GATEWAY-HOST>`；仅在本机环境变量 `CPOXY_API_KEY` 设置自己的网关令牌，不在 TOML 里写令牌。模板默认用已通过 Codex CLI 0.157.1 Responses 真实问答的 `gemini-3.5-flash-lite`；实验性 `gemini-4-argon` 也通过 Responses 普通/SSE 及 CLI 基本文本任务，可按需改 `model`（复杂工具调用未验收）。ChatGPT Web 当前只有聊天接口、无 `/v1/responses`，不能作为 Codex CLI provider；Grok Web 的 Responses 简单文本问答可用，但 Codex CLI 所带的工具参数被上游以 HTTP 400 拒绝，同样不能当作可用的 Codex provider。若希望不覆盖官方默认模型，将模板顶部两行放到 `[profiles.cpoxy]`，再运行 `codex --profile cpoxy`。分来源的接口状态见 [docs/api-paradigms.md](docs/api-paradigms.md)。
+**Codex CLI 专用**：将 [config/codex/cpoxy.config.toml](config/codex/cpoxy.config.toml) 合并到 `%USERPROFILE%\.codex\config.toml`，替换 `<GATEWAY-HOST>`；仅在本机环境变量 `CPOXY_API_KEY` 设置自己的网关令牌，不在 TOML 里写令牌。模板默认用已通过 Codex CLI 0.157.1 Responses 真实问答的 `gemini-3.5-flash-lite`；`config/codex/gemini4.config.toml` 提供 `gemini4` profile，使用实验性 `gemini-4-argon` 和 `model_reasoning_effort="high"`。当前网关令牌已实测 Gemini 4 普通/SSE 及 Codex 两个基础任务通过（复杂工具调用未验收）。ChatGPT Web 当前只有聊天接口、无 `/v1/responses`，不能作为 Codex CLI provider；Grok Web 的 Responses 简单文本与首次工具调用可用，但默认 Codex CLI 的 `namespace` 工具被拒绝；在隔离配置关闭 `features.multi_agent` 后，Windows `read-only` 沙箱又拒绝执行收到的命令，因此**不能当作可用的 Codex provider**。Grok 曾单次通过的 agent 范式是 [Chat Completions 函数工具往返](docs/api-paradigms.md#grok-web-agent实际验收的函数工具往返)，当前最终构建仍需稳定性复验，不是 Codex CLI。若希望不覆盖官方默认模型，将模板顶部两行放到 `[profiles.cpoxy]`，再运行 `codex --profile cpoxy`。分来源的接口状态见 [docs/api-paradigms.md](docs/api-paradigms.md)。
 
 ---
 
